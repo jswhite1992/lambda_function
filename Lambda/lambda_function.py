@@ -124,7 +124,51 @@ def recommend_portfolio(intent_request):
     risk_level = get_slots(intent_request)["riskLevel"]
     source = intent_request["invocationSource"]
 
-    # YOUR CODE GOES HERE!
+    if source == "DialogCodeHook":
+        # Perform basic validation on the supplied input slots.
+        slots = get_slots(intent_request)
+
+        validation_result = validate_data(age, investment_amount, intent_request)
+        if not validation_result["isValid"]:
+            slots[validation_result["violatedSlot"]] = None  # Cleans invalid slot
+
+            # Returns an elicitSlot dialog to request new data for the invalid slot
+            return elicit_slot(
+                intent_request["sessionAttributes"],
+                intent_request["currentIntent"]["name"],
+                slots,
+                validation_result["violatedSlot"],
+                validation_result["message"],
+            )
+
+        # Fetch current session attibutes
+        output_session_attributes = intent_request["sessionAttributes"]
+
+        return delegate(output_session_attributes, get_slots(intent_request))
+
+    # Get the initial investment recommendation
+    if risk_level == "none":
+        initial_recommendation = "100% bonds (AGG), 0% equities (SPY)"
+    elif risk_level == "low":
+        initial_recommendation = "60% bonds (AGG), 40% equities (SPY)"
+    elif risk_level == "medium":
+        initial_recommendation = "40% bonds (AGG), 60% equities (SPY)"
+    elif risk_level == "high":
+        initial_recommendation = "20% bonds (AGG), 80% equities (SPY)"
+
+    # Return a message with the initial recommendation based on the risk level.
+    return close(
+        intent_request["sessionAttributes"],
+        "Fulfilled",
+        {
+            "contentType": "PlainText",
+            "content": """{} thank you for your information;
+            based on the risk level you defined, my recommendation is to choose an investment portfolio with {}
+            """.format(
+                first_name, initial_recommendation
+            ),
+        },
+    )
 
 
 ### Intents Dispatcher ###
